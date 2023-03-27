@@ -1,5 +1,6 @@
 import click
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from dotenv import find_dotenv, load_dotenv
 

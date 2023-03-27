@@ -37,9 +37,18 @@ data
     ...
 ```
 
+### Build dataset
+```
+python3 -m ifcclouds.data.make_dataset
+```
+
 ### Convert IFC files to point clouds
 ```
-python3 -m src.data.make_dataset
+python3 -m ifcclouds.convert IFC_FILE_PATH PLY_FILE_PATH
+```
+or in script
+```
+from ifcclouds.convert import process_ifc_file
 ```
 
 ## To Do
