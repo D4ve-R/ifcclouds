@@ -3,8 +3,8 @@ import torch
 from torch.utils.data import DataLoader
 from dotenv import find_dotenv, load_dotenv
 
-from src.data.dataset import IfcCloudDs
-from src.models.dgcnn import DGCNN
+from ifcclouds.data.dataset import IfcCloudDs
+from ifcclouds.models.dgcnn import DGCNN
 
 @click.command()
 @click.argument('model', default='dgcnn')

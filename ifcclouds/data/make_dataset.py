@@ -28,7 +28,7 @@ def main(input_dir, output_dir):
         if(os.path.exists(os.path.join(output_dir, output_file+'.ply'))):
             print('Skipping {}'.format(input_file))
             continue
-        os.system('python3 convert.py {} {}'.format(input_file, output_dir))
+        os.system('python3 -m ifcclouds.convert {} {}'.format(input_file, output_dir))
 
 
 if __name__ == '__main__':
