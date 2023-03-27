@@ -1,9 +1,28 @@
 import os
 import glob
+import json
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 DATADIR=os.path.join('data', 'processed')
+
+default_classes = [
+    "IfcBeam", 
+    "IfcDoor", 
+    "IfcFurniture", 
+    "IfcFurnishingElement",
+    "IfcLamp", 
+    "IfcOutlet", 
+    "IfcPipeSegment", 
+    "IfcRailing", 
+    "IfcSlab", 
+    "IfcStair", 
+    "IfcWall", 
+    "IfcWindow",
+    "IfcRoof",
+    "IfcRamp",  
+]
 
 def read_ply(filename):
   """
@@ -24,7 +43,7 @@ def load_ifccloud_ds(partition, test_sample):
   Loads the ifccloud dataset. Returns a numpy array of shape (n, 4096, 3) and an array of shape(n,4096,1).
   """
   if partition == 'train':
-    files = glob.glob(os.path.join(DATADIR,'train', '*.ply'))
+    files = glob.glob(os.path.join(DATADIR, '*.ply'))
   elif partition == 'test':
     files = glob.glob(os.path.join(DATADIR, 'test', '*.ply'))
   else:
@@ -35,12 +54,18 @@ def load_ifccloud_ds(partition, test_sample):
     data, label = read_ply(file)
     points.append(data)
     labels.append(label)
+    break
   return np.array(points), np.array(labels)
 
 def load_classes_from_json(json_file_path, verbose=False):
-  if verbose: print('Loading classes from %s' % json_file_path)
-  with open(json_file_path) as json_file:
-    return json.load(json_file)
+    if verbose: print('Loading classes from %s' % json_file_path)
+    try:
+        with open(json_file_path) as json_file:
+            return json.load(json_file)
+    except Exception as e:
+        if verbose: print(e)
+        print('Error loading classes from %s, return default' % json_file_path)
+        return default_classes
 
 class IfcCloudDs(Dataset):
   def __init__(self, partition='train', num_points=4096, test_sample='1'):
