@@ -1,0 +1,169 @@
+#/usr/bin/env python3
+import sys
+import argparse
+import json
+import os
+import numpy as np
+from numpy.typing import ArrayLike as ndArray
+import ifcopenshell
+import ifcopenshell.geom
+
+N = int(os.getenv('N', 1024 * 24))
+
+default_classes = [
+    "IfcBeam", 
+    "IfcDoor", 
+    "IfcFurniture", 
+    "IfcFurnishingElement",
+    "IfcLamp", 
+    "IfcOutlet", 
+    "IfcPipeSegment", 
+    "IfcRailing", 
+    "IfcSlab", 
+    "IfcStair", 
+    "IfcWall", 
+    "IfcWindow",
+    "IfcRoof",
+    "IfcRamp",  
+]
+
+
+argparser = argparse.ArgumentParser(description='Converts a file from ifc format to ply')
+argparser.add_argument('input', help='Input file')
+argparser.add_argument('output', help='Output dir')
+argparser.add_argument('-f', '--format', help='Output format', default='ply')
+argparser.add_argument('-v', '--verbose', help='Verbose output', action='store_true')
+argparser.add_argument('-d', '--debug', help='Debug output', action='store_true')
+
+def load_classes_from_json(json_file_path, verbose=False):
+    if verbose: print('Loading classes from %s' % json_file_path)
+    try:
+        with open(json_file_path) as json_file:
+            return json.load(json_file)
+    except Exception as e:
+        if verbose: print(e)
+        print('Error loading classes from %s, return default' % json_file_path)
+        return default_classes
+
+def local_to_world(origin, transform, verts):
+    return origin + np.matmul(transform.T, verts.T).T
+
+def array_to_ply(data: ndArray):
+    """Convert a numpy array to PLY format.
+    data is a numpy array of shape (n, 4) where n is the number of vertices.
+    where the fourth column is the class.
+    Returns a string.
+    """
+    ply = 'ply\n'
+    ply += 'format ascii 1.0\n'
+    ply += 'element vertex %d\n' % data.shape[0]
+    ply += 'property float x\n'
+    ply += 'property float y\n'
+    ply += 'property float z\n'
+    ply += 'property int class\n'
+    ply += 'end_header\n'
+    for vertex in data:
+        ply += '%f %f %f %d\n' % (vertex[0], vertex[1], vertex[2], vertex[3])
+    return ply
+
+def write_ply(out_path, vertices: ndArray):
+    with open(out_path, 'w') as out_file:
+        out_file.write(array_to_ply(vertices))
+
+def barycentric(N):
+    u = np.random.rand(N, 1)
+    v = np.random.rand(N, 1)
+
+    lp = u + v > 1
+    u[lp] = 1 - u[lp]
+    v[lp] = 1 - v[lp]
+    w = 1 - (u + v)
+    return u, v, w
+
+def triangle_areas(v1: ndArray, v2: ndArray, v3: ndArray):
+    """Calculate the area of multiple triangle given its vertices.
+    Parameters are numpy arrays of shape (n, 3) where n is the number of triangles.
+    """
+    return 0.5 * np.linalg.norm(np.cross(v2 - v1, v3 - v1), axis=1)
+
+def sample_pointcloud(vertices: ndArray, faces: ndArray, points=4096):
+    v1 = vertices[faces[:, 0]]
+    v2 = vertices[faces[:, 1]]
+    v3 = vertices[faces[:, 2]]
+    
+    areas = triangle_areas(v1, v2, v3)
+    probs = areas / np.sum(areas)
+    random_indices = np.random.choice(range(len(areas)), points, p=probs)
+    v1 = v1[random_indices]
+    v2 = v2[random_indices]
+    v3 = v3[random_indices]
+    u, v, w = barycentric(N)
+    points = u * v1 + v * v2 + w * v3
+    return points.astype(np.float32)
+
+def process_ifc_file(ifc_file_path, out_path, verbose=False, debug=False):
+    if verbose: print('Processing %s' % ifc_file_path)
+    ifc_file_name = os.path.basename(ifc_file_path).split('.')[0]
+    ifc_file = ifcopenshell.open(ifc_file_path)
+    settings = ifcopenshell.geom.settings()
+    class_names = load_classes_from_json('classes.json', verbose)
+    classes = {ifc_class: None for ifc_class in class_names}
+    for ifc_class in class_names:
+        if verbose: print('Processing %s' % ifc_class)
+        entities = 0
+        for ifc_entity in ifc_file.by_type(ifc_class):
+            entities += 1
+            if verbose: print('Processing %s Entity No. %d' % (ifc_class, entities))
+            shape = None
+            try:
+                shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+            except Exception as e:
+                if debug: print(e)
+                print('Error creating shape for %s Entity No. %d' % (ifc_class, entities))
+                continue
+
+            matrix = shape.transformation.matrix.data
+            matrix = np.array(matrix).reshape(4, 3)
+            origin = matrix[-1]
+            transform = matrix[:-1]
+            verts = shape.geometry.verts
+            faces = shape.geometry.faces
+
+            verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+            faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+            verts = local_to_world(origin, transform, verts)
+
+            points = sample_pointcloud(verts, faces, N)
+            if classes[ifc_class] is None: classes[ifc_class] = []
+            classes[ifc_class].append(points)
+          
+        if verbose: print('Processed %d entities of type %s' % (entities, ifc_class))
+
+    all_points = []
+    for ifc_class in class_names:
+        if classes[ifc_class] is not None:
+            points = np.concatenate(classes[ifc_class])
+            labels = np.full((points.shape[0], 1), class_names.index(ifc_class))
+            labeled_points = np.concatenate((points, labels), axis=1)
+            all_points.append(labeled_points)
+
+    write_ply(os.path.join(out_path, ifc_file_name+'.ply'), np.concatenate(all_points))
+            
+def main(argv = sys.argv[1:]):
+    args = argparser.parse_args(argv)
+    if args.debug:
+        print(args)
+
+    if args.verbose:
+        print('Converting %s to %s as %s' % (args.input, args.output, args.format))
+
+    if args.format == 'ply':
+        if args.verbose: print('Converting %s to %s' % (args.input, args.output))
+        #if not os.path.exists(args.output)
+
+        process_ifc_file(args.input, args.output, args.verbose, args.debug)
+    else:
+        print('Unknown format: %s' % args.format)
+
+if __name__ == '__main__':
+    main()
