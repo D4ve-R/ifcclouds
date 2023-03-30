@@ -2,6 +2,7 @@ import os
 import glob
 import json
 import numpy as np
+import random
 import torch
 from torch.utils.data import Dataset
 
@@ -45,6 +46,7 @@ def load_ifccloud_ds(partition, test_sample):
   if partition == 'train':
     files = glob.glob(os.path.join(DATADIR, '*.ply'))
   elif partition == 'test':
+    raise NotImplementedError('Test partition not implemented yet')
     files = glob.glob(os.path.join(DATADIR, 'test', '*.ply'))
   else:
     raise ValueError('Partition must be train or test')
@@ -54,8 +56,7 @@ def load_ifccloud_ds(partition, test_sample):
     data, label = read_ply(file)
     points.append(data)
     labels.append(label)
-    break
-  return np.array(points), np.array(labels)
+  return points, labels
 
 def load_classes_from_json(json_file_path, verbose=False):
     if verbose: print('Loading classes from %s' % json_file_path)
@@ -72,20 +73,22 @@ class IfcCloudDs(Dataset):
     self.points, self.label = load_ifccloud_ds(partition, test_sample)
     self.num_points = num_points
     self.partition = partition
-    self.classes = load_classes_from_json(os.path.join('..', 'classes.json'))
+    self.classes = load_classes_from_json('classes.json')
     self.num_classes = len(self.classes)
 
   def __getitem__(self, item):
-    pointcloud = self.points[item][:self.num_points]
-    label = self.label[item][:self.num_points]
+    pointcloud = self.points[item]
+    label = self.label[item]
+    indices = list(range(pointcloud.shape[0]))
+    sampled_indices = random.sample(indices, self.num_points)
+
     if self.partition == 'train':
-      indices = list(range(pointcloud.shape[0]))
-      np.random.shuffle(indices)
-      pointcloud = pointcloud[indices]
-      label = label[indices]
+      np.random.shuffle(sampled_indices)
+      pointcloud = pointcloud[sampled_indices]
+      label = label[sampled_indices]
     #label = torch.LongTensor(label)
     label = torch.tensor(label)
     return pointcloud, label
 
   def __len__(self):
-    return self.points.shape[0]
+    return len(self.points)

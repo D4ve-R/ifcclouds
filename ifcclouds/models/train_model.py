@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from dotenv import find_dotenv, load_dotenv
 
 from ifcclouds.data.dataset import IfcCloudDs
-from ifcclouds.models.dgcnn import DGCNN_semseg
+from ifcclouds.models.dgcnn import DGCNN_partseg
 
 @click.command()
 @click.argument('model', default='dgcnn')
@@ -15,9 +15,9 @@ def main(model, checkpoint_dir, cuda):
   """ Runs model training """
   device = torch.device("cuda" if cuda else "cpu")
   dataset = IfcCloudDs(partition='train', num_points=4096, test_sample='1')
-  dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
+  dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=4)
   if model == 'dgcnn':
-    model = DGCNN_semseg(dataset.num_classes).to(device)
+    model = DGCNN_partseg(dataset.num_classes).to(device)
   else:
     raise NotImplementedError('Model not implemented')
 
@@ -29,9 +29,8 @@ def main(model, checkpoint_dir, cuda):
   for pointcloud, label in dataloader:
     print(pointcloud.shape)
     print(label.shape)
-    #pred = model(pointcloud)
-    #print(pred.shape)
-    break
+    pred = model(pointcloud, label)
+    print(pred.shape)
 
   #model._save_to_state_dict(checkpoint_dir)
 
