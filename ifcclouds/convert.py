@@ -7,8 +7,7 @@ import numpy as np
 from numpy.typing import ArrayLike as ndArray
 import ifcopenshell
 import ifcopenshell.geom
-
-N = int(os.getenv('N', 1024 * 24))
+from tqdm import tqdm
 
 default_classes = [
     "IfcBeam", 
@@ -31,6 +30,8 @@ default_classes = [
 argparser = argparse.ArgumentParser(description='Converts a file from ifc format to ply')
 argparser.add_argument('input', help='Input file')
 argparser.add_argument('output', help='Output dir')
+argparser.add_argument('-n', '--num_points', help='Average number of points per m^2', default=1000)
+argparser.add_argument('-c', '--classes', help='Classes to extract', default=os.path.join(os.path.dirname(__file__), 'data', 'classes.json'))
 argparser.add_argument('-f', '--format', help='Output format', default='ply')
 argparser.add_argument('-v', '--verbose', help='Verbose output', action='store_true')
 argparser.add_argument('-d', '--debug', help='Debug output', action='store_true')
@@ -71,6 +72,9 @@ def write_ply(out_path, vertices: ndArray):
         out_file.write(array_to_ply(vertices))
 
 def barycentric(N):
+    """Generate N random barycentric coordinates. 
+    Returns three numpy arrays of shape (N, 1).
+    """
     u = np.random.rand(N, 1)
     v = np.random.rand(N, 1)
 
@@ -86,29 +90,42 @@ def triangle_areas(v1: ndArray, v2: ndArray, v3: ndArray):
     """
     return 0.5 * np.linalg.norm(np.cross(v2 - v1, v3 - v1), axis=1)
 
-def sample_pointcloud(vertices: ndArray, faces: ndArray, points=4096):
+def gen_pointcloud(vertices: ndArray, faces: ndArray, num_points=1000):
+    """Generate a point cloud from a mesh.
+    Parameters are vertices and faces of a mesh as numpy array.
+    Returns a numpy array of shape (num_points, 3) with dtype=float32.
+    """
     v1 = vertices[faces[:, 0]]
     v2 = vertices[faces[:, 1]]
     v3 = vertices[faces[:, 2]]
     
     areas = triangle_areas(v1, v2, v3)
-    probs = areas / np.sum(areas)
-    random_indices = np.random.choice(range(len(areas)), points, p=probs)
+    totalArea = np.sum(areas)
+    probs = areas / totalArea
+    num_points = totalArea.astype(int) * num_points
+    random_indices = np.random.choice(range(len(areas)), num_points, p=probs)
     v1 = v1[random_indices]
     v2 = v2[random_indices]
     v3 = v3[random_indices]
-    u, v, w = barycentric(N)
+    u, v, w = barycentric(num_points)
     points = u * v1 + v * v2 + w * v3
     return points.astype(np.float32)
 
-def process_ifc_file(ifc_file_path, out_path, verbose=False, debug=False):
+def process_ifc_file(args):
+    ifc_file_path = args.input
+    out_path = args.output
+    num_points = args.num_points
+    verbose = args.verbose
+    debug = args.debug
+    class_path = args.classes
+
     if verbose: print('Processing %s' % ifc_file_path)
     ifc_file_name = os.path.basename(ifc_file_path).split('.')[0]
     ifc_file = ifcopenshell.open(ifc_file_path)
     settings = ifcopenshell.geom.settings()
-    class_names = load_classes_from_json('classes.json', verbose)
+    class_names = load_classes_from_json(class_path, verbose)
     classes = {ifc_class: None for ifc_class in class_names}
-    for ifc_class in class_names:
+    for ifc_class in tqdm(class_names):
         if verbose: print('Processing %s' % ifc_class)
         entities = 0
         for ifc_entity in ifc_file.by_type(ifc_class):
@@ -133,7 +150,7 @@ def process_ifc_file(ifc_file_path, out_path, verbose=False, debug=False):
             faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
             verts = local_to_world(origin, transform, verts)
 
-            points = sample_pointcloud(verts, faces, N)
+            points = gen_pointcloud(verts, faces, num_points)
             if classes[ifc_class] is None: classes[ifc_class] = []
             classes[ifc_class].append(points)
           
@@ -159,9 +176,7 @@ def main(argv = sys.argv[1:]):
 
     if args.format == 'ply':
         if args.verbose: print('Converting %s to %s' % (args.input, args.output))
-        #if not os.path.exists(args.output)
-
-        process_ifc_file(args.input, args.output, args.verbose, args.debug)
+        process_ifc_file(args)
     else:
         print('Unknown format: %s' % args.format)
 

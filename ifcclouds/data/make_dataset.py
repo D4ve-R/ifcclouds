@@ -24,10 +24,12 @@ def main(input_dir, output_dir):
     logger.info('making final data set from raw data')
     for input_file in glob.glob(input_dir + '/*.ifc'):
         output_file = os.path.basename(input_file).split('.')[0]
-        print('Processing {}'.format(input_file))
+        
         if(os.path.exists(os.path.join(output_dir, output_file+'.ply'))):
-            print('Skipping {}'.format(input_file))
+            logger.info('Skipping {}'.format(input_file))
             continue
+
+        logger.info('Processing {}'.format(input_file))
         os.system('python3 -m ifcclouds.convert {} {}'.format(input_file, output_dir))
 
 
