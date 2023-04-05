@@ -15,12 +15,11 @@ def main(model, checkpoint_dir, cuda):
   """ Runs model training """
   device = torch.device("cuda" if cuda else "cpu")
   dataset = IfcCloudDs(partition='train', num_points=4096, test_sample='1')
-  dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=4)
+  dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
   if model == 'dgcnn':
     model = DGCNN_partseg(dataset.num_classes).to(device)
   else:
     raise NotImplementedError('Model not implemented')
-
   #model.load_state_dict(torch.load(model))
   if checkpoint_dir != '':
     model.load_state_dict(torch.load(checkpoint_dir))
@@ -29,8 +28,8 @@ def main(model, checkpoint_dir, cuda):
   for pointcloud, label in dataloader:
     print(pointcloud.shape)
     print(label.shape)
-    pred = model(pointcloud, label)
-    print(pred.shape)
+    #pred = model(pointcloud, label)
+    #print(pred.shape)
 
   #model._save_to_state_dict(checkpoint_dir)
 
