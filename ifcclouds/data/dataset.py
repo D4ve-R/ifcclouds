@@ -78,7 +78,7 @@ class IfcCloudDs(Dataset):
     self.files = load_ifccloud_ds(partition, test_sample)
     self.num_points = num_points
     self.partition = partition
-    self.classes = load_classes_from_json('classes.json')
+    self.classes = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'classes.json'))
     self.num_classes = len(self.classes)
 
   def __getitem__(self, item):
