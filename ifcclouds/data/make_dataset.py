@@ -5,13 +5,12 @@ import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 import glob
-import zlib
+import multiprocessing
 
-def unzip(file_path):
-    """Unzip a file and safe."""
-    with open(file_path, 'rb') as f:
-        data = zlib.decompress(f.read())
-        return data
+    
+def convert_file(input_file, output_dir):
+    os.system('python3 -m ifcclouds.convert {} {}'.format(input_file, output_dir))
+
 
 @click.command()
 @click.argument('input_dir', default='data/raw', type=click.Path(exists=True))
@@ -22,7 +21,8 @@ def main(input_dir, output_dir):
     """
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
-    for input_file in glob.glob(input_dir + '/*.ifc'):
+    pool = multiprocessing.Pool()
+    for input_file in glob.glob(os.path.join(input_dir, '*.ifc')):
         output_file = os.path.basename(input_file).split('.')[0]
         
         if(os.path.exists(os.path.join(output_dir, output_file+'.ply'))):
@@ -30,7 +30,11 @@ def main(input_dir, output_dir):
             continue
 
         logger.info('Processing {}'.format(input_file))
-        os.system('python3 -m ifcclouds.convert {} {}'.format(input_file, output_dir))
+        #os.system('python3 -m ifcclouds.convert {} {}'.format(input_file, output_dir))
+        pool.apply_async(convert_file, args=(input_file, output_dir))
+    
+    pool.close()
+    pool.join()
 
 
 if __name__ == '__main__':
