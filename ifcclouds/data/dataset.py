@@ -25,10 +25,20 @@ default_classes = [
     "IfcRamp",  
 ]
 
+def one_hot_encode(label, num_classes):
+  """
+  One hot encodes the label.
+  """
+  label_one_hot = np.zeros((label.shape[0], num_classes))
+  for idx in range(label.shape[0]):
+    label_one_hot[idx, label[idx]] = 1
+  return torch.from_numpy(label_one_hot.astype(np.float32))
+
 def read_ply(file, partition, num_points):
   """
   Reads a ply file and returns a numpy array of shape (n, 3) and an array of shape(n,1).
   """
+  #print('Preprocessing data...')
   lines = []
   with open(file, 'r') as f:
     lines = f.readlines()
@@ -74,15 +84,25 @@ def load_classes_from_json(json_file_path, verbose=False):
         return default_classes
 
 class IfcCloudDs(Dataset):
-  def __init__(self, partition='train', num_points=4096, test_sample='1'):
-    self.files = load_ifccloud_ds(partition, test_sample)
+  def __init__(self, cache, partition='train', num_points=4096, test_sample='1'):
+    self.cache = cache
+    self.files = []
+    for file in load_ifccloud_ds(partition, test_sample):
+      self.files.append(file)
     self.num_points = num_points
     self.partition = partition
     self.classes = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'classes.json'))
     self.num_classes = len(self.classes)
 
   def __getitem__(self, item):
-    pointcloud, label = read_ply(self.files[item], self.partition, self.num_points)
+    if item not in self.cache:
+      self.cache[item] = read_ply(self.files[item], self.partition, self.num_points)
+    
+    pointcloud, seg = self.cache[item]
+
+    # one hot encode the labels
+    label = one_hot_encode(seg, self.num_classes)
+    
     #indices = list(range(pointcloud.shape[0]))
     #sampled_indices = random.sample(indices, self.num_points)
 
@@ -90,9 +110,9 @@ class IfcCloudDs(Dataset):
     #  np.random.shuffle(sampled_indices)
     #  pointcloud = pointcloud[sampled_indices]
     #  label = label[sampled_indices]
-    #label = torch.LongTensor(label)
-    label = torch.tensor(label)
-    return pointcloud, label
+    seg = torch.LongTensor(seg)
+
+    return pointcloud, label, seg
 
   def __len__(self):
     return len(self.files)
