@@ -106,4 +106,8 @@ from ifcclouds.convert import process_ifc_file
 
 --------
 
+## References
+- [IfcOpenShell](https://github.com/IfcOpenShell/IfcOpenShell)
+- [Dynamic Graph CNN for Learning on Point Clouds](https://github.com/antao97/dgcnn.pytorch)
+
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
