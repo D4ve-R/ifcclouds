@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import StepLR
 from torch import optim
 from dotenv import find_dotenv, load_dotenv
 from tqdm import tqdm
@@ -12,15 +13,6 @@ from datetime import datetime
 from ifcclouds.data.dataset import IfcCloudDs
 from ifcclouds.models.dgcnn import DGCNN_semseg
 from ifcclouds.visualization.visualize import plot_loss
-
-def save_model(model, checkpoint_dir, epoch):
-  """ Saves the model to the checkpoint directory """
-  timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-  torch.save(model.state_dict(), os.path.join(checkpoint_dir, timestamp + '_model_%d.pth' % epoch))
-
-def load_model(model, checkpoint_path):
-  """ Loads the model from the checkpoint directory """
-  model.load_state_dict(torch.load(checkpoint_path))
 
 @click.command()
 @click.argument('model_type', default='dgcnn')
@@ -51,12 +43,15 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
   else:
     opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
+  scheduler = StepLR(opt, step_size=20, gamma=0.5, last_epoch=-1)
+
   if checkpoint_path != 'models/':
-    load_model(model, checkpoint_path)
+    model.load_state_dict(torch.load(checkpoint_path))
   
   model = nn.DataParallel(model)
 
   total_loss = []
+  train_acc = 0.0
 
   for epoch in tqdm(range(epochs)):
     model.train()
@@ -76,9 +71,14 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
       total_loss.append(loss_item)
 
       seg_pred = pred.max(dim=2)[1]
+      correct = seg_pred.eq(seg.view(-1,1).squeeze()).cpu().sum()
+      train_acc += correct.item() / (seg.size()[0] * seg.size()[1])
+    
+    scheduler.step()
       
-    save_model(model, os.path.dirname(checkpoint_path), epoch)
-
+  timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+  torch.save(model.state_dict(keep_vars=True), os.path.join(os.path.dirname(checkpoint_path), timestamp + '_%s.pth' % model_type))
+  print('Train Accuracy: %f' % (train_acc / len(dataloader)))
   plot_loss(total_loss)
 
 if __name__ == '__main__':
