@@ -11,7 +11,7 @@ from multiprocessing import Manager
 from datetime import datetime
 
 from ifcclouds.data.dataset import IfcCloudDs
-from ifcclouds.models.dgcnn import DGCNN_partseg
+from ifcclouds.models.dgcnn import DGCNN_partseg, DGCNN_semseg
 from ifcclouds.visualization.visualize import plot_pointcloud, open_lidarview
 
 def save_model(model, checkpoint_dir, epoch):
@@ -41,7 +41,7 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
   dataloader = DataLoader(dataset, batch_size=2, shuffle=True, num_workers=2)
   model = None
   if model_type == 'dgcnn':
-    model = DGCNN_partseg(dataset.num_classes).to(device)
+    model = DGCNN_semseg(dataset.num_classes).to(device)
   elif model_type == 'pointnet':
     raise NotImplementedError('Model not implemented')
   else:
@@ -63,24 +63,20 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
     model.train()
     for pointcloud, label, seg in dataloader:
       pointcloud = pointcloud.to(device)
-      label = label.to(device)
+      #label = label.to(device)
       seg = seg.to(device)
 
-      label = torch.ones((2, 13, 1), device=device)
-
-      #print(pointcloud.shape)
-      #print(label[0][:5])
-      #print(seg.shape)
-      
-      #plot_pointcloud(pointcloud[0], seg[0])
-
       opt.zero_grad()
-      pred = model(pointcloud, label)
+      pred = model(pointcloud)
+      pred = pred.permute(0, 2, 1).contiguous()
 
-      loss = F.cross_entropy(pred, seg, reduction='mean')
+      loss = F.cross_entropy(pred.view(-1, 13), seg.view(-1,1).squeeze(), reduction='mean')
       loss.backward()
       opt.step()
       print('Loss: %f' % loss.item())
+
+      seg_pred = pred.max(dim=2)[1]
+      
 
     save_model(model, os.path.dirname(checkpoint_path), epoch)
 

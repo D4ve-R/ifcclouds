@@ -188,9 +188,10 @@ class DGCNN_partseg(nn.Module):
         return x
 
 class DGCNN_semseg(nn.Module):
-    def __init__(self, num_classes, k=20, emb_dims=1024, dropout=0.5):
+    def __init__(self, num_classes, dim=3, k=20, emb_dims=1024, dropout=0.5):
         super(DGCNN_semseg, self).__init__()
         self.num_classes = num_classes
+        self.dim = dim
         self.k = k
         
         self.bn1 = nn.BatchNorm2d(64)
@@ -202,7 +203,7 @@ class DGCNN_semseg(nn.Module):
         self.bn7 = nn.BatchNorm1d(512)
         self.bn8 = nn.BatchNorm1d(256)
 
-        self.conv1 = nn.Sequential(nn.Conv2d(18, 64, kernel_size=1, bias=False),
+        self.conv1 = nn.Sequential(nn.Conv2d(self.dim*2, 64, kernel_size=1, bias=False),
                                    self.bn1,
                                    nn.LeakyReLU(negative_slope=0.2))
         self.conv2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=1, bias=False),
@@ -232,13 +233,11 @@ class DGCNN_semseg(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
-        num_points = x.size(2)
-        
-        #x.view(batch_size, -1, num_points)
-        #x.transpose(1, 2)                      # (batch_size, num_points, 3) -> (batch_size, 3, num_points)
+        num_points = x.size(1)
+        x = x.transpose(2, 1)                   # (batch_size, num_points, 3) -> (batch_size, 3, num_points)
 
-        x = get_graph_feature(x, k=self.k, dim9=True)   # (batch_size, 9, num_points) -> (batch_size, 9*2, num_points, k)
-        x = self.conv1(x)                       # (batch_size, 9*2, num_points, k) -> (batch_size, 64, num_points, k)
+        x = get_graph_feature(x, k=self.k)      # (batch_size, dim, num_points) -> (batch_size, dim*2, num_points, k)
+        x = self.conv1(x)                       # (batch_size, dim*2, num_points, k) -> (batch_size, 64, num_points, k)
         x = self.conv2(x)                       # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points, k)
         x1 = x.max(dim=-1, keepdim=False)[0]    # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points)
 
