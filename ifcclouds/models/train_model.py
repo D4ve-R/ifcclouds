@@ -7,12 +7,11 @@ from torch.utils.data import DataLoader
 from torch import optim
 from dotenv import find_dotenv, load_dotenv
 from tqdm import tqdm
-from multiprocessing import Manager
 from datetime import datetime
 
 from ifcclouds.data.dataset import IfcCloudDs
-from ifcclouds.models.dgcnn import DGCNN_partseg, DGCNN_semseg
-from ifcclouds.visualization.visualize import plot_pointcloud, open_lidarview
+from ifcclouds.models.dgcnn import DGCNN_semseg
+from ifcclouds.visualization.visualize import plot_loss
 
 def save_model(model, checkpoint_dir, epoch):
   """ Saves the model to the checkpoint directory """
@@ -35,9 +34,7 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
   """ Runs model training """
   device = torch.device("cuda" if cuda and torch.cuda.is_available() else "cpu")
 
-  manager = Manager()
-  cache = manager.dict()
-  dataset = IfcCloudDs(cache, partition='train', num_points=4096, test_sample='1')
+  dataset = IfcCloudDs(partition='train', num_points=4096)
   dataloader = DataLoader(dataset, batch_size=2, shuffle=True, num_workers=2)
   model = None
   if model_type == 'dgcnn':
@@ -59,11 +56,12 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
   
   model = nn.DataParallel(model)
 
+  total_loss = []
+
   for epoch in tqdm(range(epochs)):
     model.train()
-    for pointcloud, label, seg in dataloader:
+    for pointcloud, seg in dataloader:
       pointcloud = pointcloud.to(device)
-      #label = label.to(device)
       seg = seg.to(device)
 
       opt.zero_grad()
@@ -73,12 +71,15 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
       loss = F.cross_entropy(pred.view(-1, 13), seg.view(-1,1).squeeze(), reduction='mean')
       loss.backward()
       opt.step()
-      print('Loss: %f' % loss.item())
+      loss_item = loss.item()
+      print('Loss: %f' % loss_item)
+      total_loss.append(loss_item)
 
       seg_pred = pred.max(dim=2)[1]
       
-
     save_model(model, os.path.dirname(checkpoint_path), epoch)
+
+  plot_loss(total_loss)
 
 if __name__ == '__main__':
   load_dotenv(find_dotenv())
