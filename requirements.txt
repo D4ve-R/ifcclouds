@@ -11,3 +11,5 @@ python-dotenv>=0.5.1
 torch
 numpy
 ifcopenshell
+tqdm
+matplotlib

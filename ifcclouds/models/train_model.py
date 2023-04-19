@@ -76,9 +76,12 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
     scheduler.step()
       
   timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-  torch.save(model.state_dict(keep_vars=True), os.path.join(os.path.dirname(checkpoint_path), timestamp + '_%s.pth' % model_type))
+  checkpoint_file = timestamp + '_%s.pth' % model_type
+  torch.save(model.state_dict(keep_vars=True), os.path.join(os.path.dirname(checkpoint_path), checkpoint_file))
   print('Train Accuracy: %f' % (train_acc / (len(dataloader) * epochs)))
   plot_loss(total_loss)
+
+  os.system('python3 -m ifcclouds.models.test_model %s' % os.path.join(os.path.dirname(checkpoint_path), checkpoint_file))
 
 if __name__ == '__main__':
   load_dotenv(find_dotenv())
