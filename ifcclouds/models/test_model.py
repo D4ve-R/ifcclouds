@@ -7,7 +7,6 @@ from dotenv import find_dotenv, load_dotenv
 
 from ifcclouds.data.dataset import IfcCloudDs
 from ifcclouds.models.dgcnn import DGCNN_semseg
-from ifcclouds.visualization.visualize import plot_loss
 
 @click.command()
 @click.argument('checkpoint_path', type=click.Path(exists=True))
@@ -16,7 +15,7 @@ def main(checkpoint_path):
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   dataset = IfcCloudDs(partition='test', num_points=4096)
   dataloader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2)
-  model = DGCNN_semseg(dataset.num_classes)
+  model = DGCNN_semseg(dataset.num_classes).to(device)
   model = nn.DataParallel(model)
   model.load_state_dict(torch.load(checkpoint_path))
   model.eval()

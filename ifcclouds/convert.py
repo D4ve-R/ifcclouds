@@ -67,10 +67,6 @@ def array_to_ply(data: ndArray):
         ply += '%f %f %f %d\n' % (vertex[0], vertex[1], vertex[2], vertex[3])
     return ply
 
-def write_ply(out_path, vertices: ndArray):
-    with open(out_path, 'w') as out_file:
-        out_file.write(array_to_ply(vertices))
-
 def barycentric(N):
     """Generate N random barycentric coordinates. 
     Returns three numpy arrays of shape (N, 1).
@@ -164,7 +160,8 @@ def process_ifc_file(args):
             labeled_points = np.concatenate((points, labels), axis=1)
             all_points.append(labeled_points)
 
-    write_ply(os.path.join(out_path, ifc_file_name+'.ply'), np.concatenate(all_points))
+    with open(os.path.join(out_path, ifc_file_name+'.ply'), 'w') as out_file:
+        out_file.write(array_to_ply(np.concatenate(all_points)))
             
 def main(argv = sys.argv[1:]):
     args = argparser.parse_args(argv)
