@@ -44,11 +44,11 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
     opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
   scheduler = StepLR(opt, step_size=20, gamma=0.5, last_epoch=-1)
+  
+  model = nn.DataParallel(model)
 
   if checkpoint_path != 'models/':
     model.load_state_dict(torch.load(checkpoint_path))
-  
-  model = nn.DataParallel(model)
 
   total_loss = []
   train_acc = 0.0
@@ -63,22 +63,21 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
       pred = model(pointcloud)
       pred = pred.permute(0, 2, 1).contiguous()
 
-      loss = F.cross_entropy(pred.view(-1, 13), seg.view(-1,1).squeeze(), reduction='mean')
+      loss = F.cross_entropy(pred.view(-1, dataset.num_classes), seg.view(-1,1).squeeze(), reduction='mean')
       loss.backward()
       opt.step()
       loss_item = loss.item()
-      print('Loss: %f' % loss_item)
       total_loss.append(loss_item)
 
       seg_pred = pred.max(dim=2)[1]
-      correct = seg_pred.eq(seg.view(-1,1).squeeze()).cpu().sum()
-      train_acc += correct.item() / (seg.size()[0] * seg.size()[1])
+      correct = seg_pred.eq(seg).sum().item()
+      train_acc += correct / (seg.size()[0] * seg.size()[1])
     
     scheduler.step()
       
   timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
   torch.save(model.state_dict(keep_vars=True), os.path.join(os.path.dirname(checkpoint_path), timestamp + '_%s.pth' % model_type))
-  print('Train Accuracy: %f' % (train_acc / len(dataloader)))
+  print('Train Accuracy: %f' % (train_acc / (len(dataloader) * epochs)))
   plot_loss(total_loss)
 
 if __name__ == '__main__':
