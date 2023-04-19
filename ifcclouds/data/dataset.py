@@ -12,11 +12,6 @@ DATADIR=os.path.join('data', 'processed')
 default_classes = [
     "IfcBeam", 
     "IfcDoor", 
-    "IfcFurniture", 
-    "IfcFurnishingElement",
-    "IfcLamp", 
-    "IfcOutlet", 
-    "IfcPipeSegment", 
     "IfcRailing", 
     "IfcSlab", 
     "IfcStair", 

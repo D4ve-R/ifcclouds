@@ -1,1 +1,1 @@
-["IfcBeam", "IfcCableCarrierSegment", "IfcDoor", "IfcDuctSegment", "IfcFurniture", "IfcLamp", "IfcOutlet", "IfcPipeSegment", "IfcRailing", "IfcSlab", "IfcStair", "IfcWall", "IfcWindow"]
+["IfcBeam", "IfcDoor", "IfcRailing", "IfcSlab", "IfcStair", "IfcWall", "IfcWindow", "IfcRoof", "IfcRamp"]
