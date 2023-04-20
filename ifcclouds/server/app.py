@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from flask import Flask, url_for, request, jsonify, redirect, send_from_directory, render_template
+from flask import Flask, url_for, request, jsonify, redirect, render_template, send_file
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv, find_dotenv
 
@@ -30,12 +30,10 @@ def index():
     raw_dir = os.path.join(data_dir, 'raw')
     processed_files = [f for f in os.listdir(processed_dir) if os.path.isfile(os.path.join(processed_dir, f)) and f.endswith('.ply')]
     raw_files = [f for f in os.listdir(raw_dir) if os.path.isfile(os.path.join(raw_dir, f)) and f.endswith('.ifc')]
-    # Render template with file list and form
     return render_template('index.html', processed_files=processed_files, raw_files=raw_files)
 
 @app.route('/train', methods=['POST'])
 def train():
-    # Get learning rate and momentum from form
     learning_rate = request.form['learning_rate']
     momentum = request.form['momentum']
 
@@ -60,7 +58,10 @@ def process():
 @app.route('/viz')
 def viz():
     return render_template('viz.html')
-    
+
+@app.route('/file/<filename>')
+def file(filename):
+    return send_file(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'processed', filename)))
 
 
 if __name__ == "__main__":

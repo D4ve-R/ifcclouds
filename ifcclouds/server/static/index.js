@@ -109,6 +109,25 @@ function onWindowResize() {
 
 window.addEventListener('resize', onWindowResize, false);
 
+window.onload = function() {
+    // check if url parameter contains filename
+    const urlParams = new URLSearchParams(window.location.search);
+    const filename = urlParams.get('filename');
+    if (filename) {
+        const pointArray = [];
+        fetch(`file/${filename}`)
+        .then((response) => response.blob())
+        .then((blob) => {
+            const file = new File([blob], filename);
+            return readPlyFile(file, pointArray);
+        }).then(() => {
+            const pointcloud = createPointCloud(pointArray);
+            scene.add(pointcloud);
+        });
+    }
+};
+
+
 const fileInput = document.getElementById('file-input');
 let pc = null;
 fileInput.addEventListener('change', async function(e) {
