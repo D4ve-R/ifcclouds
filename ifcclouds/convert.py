@@ -10,7 +10,7 @@ import ifcopenshell.geom
 from tqdm import tqdm
 
 default_classes = [
-    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", " IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
+    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
 ]
 
 
