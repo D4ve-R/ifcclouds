@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 from torch import optim
 from dotenv import find_dotenv, load_dotenv
 from tqdm import tqdm
@@ -21,8 +21,9 @@ from ifcclouds.visualization.visualize import plot_loss
 @click.option('--lr', default=0.001, type=float)
 @click.option('--momentum', default=0.9, type=float)
 @click.option('--use_sgd', default=False, type=bool)
+@click.option('--step', default=False, type=bool)
 @click.option('--cuda', default=True, type=bool)
-def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
+def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, step, cuda):
   """ Runs model training """
   device = torch.device("cuda" if cuda and torch.cuda.is_available() else "cpu")
 
@@ -43,7 +44,7 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
   else:
     opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
-  scheduler = StepLR(opt, step_size=20, gamma=0.5, last_epoch=-1)
+  scheduler = StepLR(opt, step_size=20, gamma=0.5, last_epoch=-1) if step else CosineAnnealingLR(opt, epochs, eta_min=1e-3)
   
   model = nn.DataParallel(model)
 
@@ -72,8 +73,14 @@ def main(model_type, checkpoint_path, epochs, lr, momentum, use_sgd, cuda):
       seg_pred = pred.max(dim=2)[1]
       correct = seg_pred.eq(seg).sum().item()
       train_acc += correct / (seg.size()[0] * seg.size()[1])
-    
-    scheduler.step()
+    if step:
+      if opt.param_groups[0]['lr'] > 1e-5:
+        scheduler.step()
+      if opt.param_groups[0]['lr'] < 1e-5:
+        for param_group in opt.param_groups:
+          param_group['lr'] = 1e-5
+    else:
+      scheduler.step()
       
   timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
   checkpoint_file = timestamp + '_%s.pth' % model_type
