@@ -72,8 +72,8 @@ function readPlyFile(file, pointArray) {
                     const class_idx = parseInt(values[3]);
                     pointArray.push({
                         x: x,
-                        y: y,
-                        z: z,
+                        y: z,   // in threejs y is up
+                        z: y,
                         ...colors[class_idx],
                     });
                 }
@@ -159,11 +159,11 @@ fileInput.addEventListener('change', async function(e) {
     const worker = new Worker('static/worker.js');
     worker.postMessage(pointArray);
     worker.onmessage = function(e) {
-        console.log(e.data);
         const pointcloud = createPointCloud(e.data);
         console.log('Adding pointcloud to scene');
         scene.add(pointcloud);
         pc = pointcloud;
+        pc.rotation.z += Math.PI;
     };
     const pointcloud = createPointCloud(pointArray);
     console.log('Adding pointcloud to scene');
