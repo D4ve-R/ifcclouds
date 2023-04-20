@@ -10,15 +10,7 @@ from multiprocessing import Manager
 DATADIR=os.path.join('data', 'processed')
 
 default_classes = [
-    "IfcBeam", 
-    "IfcDoor", 
-    "IfcRailing", 
-    "IfcSlab", 
-    "IfcStair", 
-    "IfcWall", 
-    "IfcWindow",
-    "IfcRoof",
-    "IfcRamp",  
+  "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
 ]
 
 def read_ply(file):

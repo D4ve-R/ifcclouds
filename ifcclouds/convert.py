@@ -10,20 +10,7 @@ import ifcopenshell.geom
 from tqdm import tqdm
 
 default_classes = [
-    "IfcBeam", 
-    "IfcDoor", 
-    "IfcFurniture", 
-    "IfcFurnishingElement",
-    "IfcLamp", 
-    "IfcOutlet", 
-    "IfcPipeSegment", 
-    "IfcRailing", 
-    "IfcSlab", 
-    "IfcStair", 
-    "IfcWall", 
-    "IfcWindow",
-    "IfcRoof",
-    "IfcRamp",  
+    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", " IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
 ]
 
 
@@ -130,25 +117,26 @@ def process_ifc_file(args):
             shape = None
             try:
                 shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+
+                matrix = shape.transformation.matrix.data
+                matrix = np.array(matrix).reshape(4, 3)
+                origin = matrix[-1]
+                transform = matrix[:-1]
+                verts = shape.geometry.verts
+                faces = shape.geometry.faces
+
+                verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+                faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+                verts = local_to_world(origin, transform, verts)
+
+                points = gen_pointcloud(verts, faces, num_points)
+                if classes[ifc_class] is None: classes[ifc_class] = []
+                classes[ifc_class].append(points)
+
             except Exception as e:
                 if debug: print(e)
                 print('Error creating shape for %s Entity No. %d' % (ifc_class, entities))
                 continue
-
-            matrix = shape.transformation.matrix.data
-            matrix = np.array(matrix).reshape(4, 3)
-            origin = matrix[-1]
-            transform = matrix[:-1]
-            verts = shape.geometry.verts
-            faces = shape.geometry.faces
-
-            verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
-            faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
-            verts = local_to_world(origin, transform, verts)
-
-            points = gen_pointcloud(verts, faces, num_points)
-            if classes[ifc_class] is None: classes[ifc_class] = []
-            classes[ifc_class].append(points)
           
         if verbose: print('Processed %d entities of type %s' % (entities, ifc_class))
 
@@ -174,23 +162,24 @@ def process_ifc(ifc_file_path, out_path, num_points=4096):
             shape = None
             try:
                 shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+
+                matrix = shape.transformation.matrix.data
+                matrix = np.array(matrix).reshape(4, 3)
+                origin = matrix[-1]
+                transform = matrix[:-1]
+                verts = shape.geometry.verts
+                faces = shape.geometry.faces
+    
+                verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+                faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+                verts = local_to_world(origin, transform, verts)
+    
+                points = gen_pointcloud(verts, faces, num_points)
+                if classes[ifc_class] is None: classes[ifc_class] = []
+                classes[ifc_class].append(points)
+
             except Exception as e:
                 continue
-
-            matrix = shape.transformation.matrix.data
-            matrix = np.array(matrix).reshape(4, 3)
-            origin = matrix[-1]
-            transform = matrix[:-1]
-            verts = shape.geometry.verts
-            faces = shape.geometry.faces
-
-            verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
-            faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
-            verts = local_to_world(origin, transform, verts)
-
-            points = gen_pointcloud(verts, faces, num_points)
-            if classes[ifc_class] is None: classes[ifc_class] = []
-            classes[ifc_class].append(points)
 
     all_points = []
     for ifc_class in class_names:

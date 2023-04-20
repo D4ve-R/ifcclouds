@@ -3,8 +3,9 @@ import torch
 import torch.nn as nn
 
 from ifcclouds.models.dgcnn import DGCNN_semseg
+from ifcclouds.data.dataset import default_classes
 
-NUM_CLASSES = 13
+NUM_CLASSES = len(default_classes)
 
 # save pointcloud and seg to ply file
 def save_pointcloud(pointcloud, seg):

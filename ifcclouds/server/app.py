@@ -7,8 +7,9 @@ from dotenv import load_dotenv, find_dotenv
 
 from ifcclouds.models.dgcnn import DGCNN_semseg
 from ifcclouds.convert import process_ifc
+from ifcclouds.data.dataset import default_classes
 
-NUM_CLASSES = 9
+NUM_CLASSES = len(default_classes)
 
 app = Flask(__name__)
 model = DGCNN_semseg(NUM_CLASSES)
