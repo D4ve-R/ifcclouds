@@ -11,8 +11,8 @@ All mesh-points are concatenated to a single point cloud.
 The point cloud is then saved as a .ply file with the format float float float int, where the first three values are coordinates and the fourth value is the class label.
 
 Currently a DGCNN model is implemented to segment the point clouds.   
-The model is trained on 9 ifc types, to segment the point clouds into 9 classes.   
-The dataset used is very small (4) and split into train (3) and test (1) set.   
+The model is trained on 12 ifc types, to segment the point clouds into 12 classes.   
+The dataset used is very small (9) and split into train (7) and test (2) set.   
 In experiments the model achieved an accuracy of ~0.6 on the test set after training for 100 epochs.   
 
 ## Installation

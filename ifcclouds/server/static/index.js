@@ -156,7 +156,7 @@ fileInput.addEventListener('change', async function(e) {
     const pointArray = [];
     await readPlyFile(file, pointArray);
     console.log('Sending pointcloud to server');
-    const worker = new Worker('worker.js');
+    const worker = new Worker('static/worker.js');
     worker.postMessage(pointArray);
     worker.onmessage = function(e) {
         console.log(e.data);
