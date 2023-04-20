@@ -1,3 +1,18 @@
+const colors = [
+    { r: 1.0, g: 0.0, b: 0.0 },
+    { r: 0.0, g: 1.0, b: 0.0 },
+    { r: 0.0, g: 0.0, b: 1.0 },
+    { r: 1.0, g: 1.0, b: 0.0 },
+    { r: 1.0, g: 0.0, b: 1.0 },
+    { r: 0.0, g: 1.0, b: 1.0 },
+    { r: 1.0, g: 1.0, b: 1.0 },
+    { r: 0.5, g: 0.5, b: 0.5 },
+    { r: 0.5, g: 0.0, b: 0.0 },
+    { r: 0.0, g: 0.5, b: 0.0 },
+    { r: 0.0, g: 0.0, b: 0.5 },
+    { r: 0.5, g: 0.5, b: 0.0 },
+];
+
 /*
  * segment point array in chunks of size n
  */
@@ -13,22 +28,28 @@ function chunkArray(array, n=4096) {
  * send pointcloud to server in chunks
  */
 async function sendPointCloud(pointcloud) {
+    // shuffle pointcloud
+    for (let i = pointcloud.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pointcloud[i], pointcloud[j]] = [pointcloud[j], pointcloud[i]];
+    }
     const chunks = chunkArray(pointcloud);
     const data = [];
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const res = await sendChunkToServer(chunk);
-        data.push(res);
+        let res = await sendChunkToServer(chunk);
+        res = res.output[0];
+        data.push(chunk.map((point, j) => {
+            return {
+                x: point[0],
+                y: point[1],
+                z: point[2],
+                ...colors[res[j]],
+            };
+        }));
     }
 
-    // unchunk data
-    const unchunked = [];
-    for (let i = 0; i < data.length; i++) {
-        const chunk = data[i];
-        for (let j = 0; j < chunk.length; j++) {
-            unchunked.push(chunk[j]);
-        }
-    }
+    const unchunked = [].concat.apply([], data);
     return unchunked;
 }
 

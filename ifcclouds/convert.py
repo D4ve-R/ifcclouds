@@ -162,6 +162,46 @@ def process_ifc_file(args):
 
     with open(os.path.join(out_path, ifc_file_name+'.ply'), 'w') as out_file:
         out_file.write(array_to_ply(np.concatenate(all_points)))
+
+def process_ifc(ifc_file_path, out_path, num_points=4096):
+    ifc_file_name = os.path.basename(ifc_file_path).split('.')[0]
+    ifc_file = ifcopenshell.open(ifc_file_path)
+    settings = ifcopenshell.geom.settings()
+    class_names = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'data', 'classes.json'))
+    classes = {ifc_class: None for ifc_class in class_names}
+    for ifc_class in class_names:
+        for ifc_entity in ifc_file.by_type(ifc_class):
+            shape = None
+            try:
+                shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+            except Exception as e:
+                continue
+
+            matrix = shape.transformation.matrix.data
+            matrix = np.array(matrix).reshape(4, 3)
+            origin = matrix[-1]
+            transform = matrix[:-1]
+            verts = shape.geometry.verts
+            faces = shape.geometry.faces
+
+            verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+            faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+            verts = local_to_world(origin, transform, verts)
+
+            points = gen_pointcloud(verts, faces, num_points)
+            if classes[ifc_class] is None: classes[ifc_class] = []
+            classes[ifc_class].append(points)
+
+    all_points = []
+    for ifc_class in class_names:
+        if classes[ifc_class] is not None:
+            points = np.concatenate(classes[ifc_class])
+            labels = np.full((points.shape[0], 1), class_names.index(ifc_class))
+            labeled_points = np.concatenate((points, labels), axis=1)
+            all_points.append(labeled_points)
+
+    with open(os.path.join(out_path, ifc_file_name+'.ply'), 'w') as out_file:
+        out_file.write(array_to_ply(np.concatenate(all_points)))
             
 def main(argv = sys.argv[1:]):
     args = argparser.parse_args(argv)

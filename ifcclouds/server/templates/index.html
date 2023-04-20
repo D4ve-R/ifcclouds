@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <title>File List</title>
+  </head>
+  <body>
+    <h1>Processed Files</h1>
+    <ul>
+      {% for file in processed_files %}
+        <li>{{ file }}</li>
+      {% endfor %}
+    </ul>
+    <h1>Raw Files</h1>
+    <ul>
+      {% for file in raw_files %}
+        <li>{{ file }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Train Model</h2>
+    <form action="{{ url_for('train') }}" method="post">
+      <label for="learning_rate">Learning Rate:</label>
+      <input type="text" name="learning_rate" id="learning_rate">
+      <br>
+      <label for="momentum">Momentum:</label>
+      <input type="text" name="momentum" id="momentum">
+      <br>
+      <input type="submit" value="Train">
+    </form>
+    <form action="{{ url_for('process') }}" method=post enctype=multipart/form-data>
+        <input type=file name=file accept=".ifc">
+        <input type=submit value=Convert>
+    </form>
+  </body>
+</html>

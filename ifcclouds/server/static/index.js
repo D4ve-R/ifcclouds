@@ -110,6 +110,7 @@ function onWindowResize() {
 window.addEventListener('resize', onWindowResize, false);
 
 const fileInput = document.getElementById('file-input');
+let pc = null;
 fileInput.addEventListener('change', async function(e) {
     // remove previous pointcloud
     const prev = scene.children[0];
@@ -139,7 +140,11 @@ fileInput.addEventListener('change', async function(e) {
     const worker = new Worker('worker.js');
     worker.postMessage(pointArray);
     worker.onmessage = function(e) {
-        console.log('Received pointcloud from server', e.data);
+        console.log(e.data);
+        const pointcloud = createPointCloud(e.data);
+        console.log('Adding pointcloud to scene');
+        scene.add(pointcloud);
+        pc = pointcloud;
     };
     const pointcloud = createPointCloud(pointArray);
     console.log('Adding pointcloud to scene');
@@ -155,7 +160,8 @@ document.body.appendChild(stats.dom);
 
 function animate() {
 	requestAnimationFrame( animate );
-
+    if(pc)
+        pc.rotation.z += 0.001;
     controls.update();
 	renderer.render( scene, camera );
     stats.update();
