@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>ifcclouds</title>
+    <style>
+        body { margin: 0; }
+
+        #file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin-top: 0.5rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            z-index: 1000;
+            cursor: pointer;
+            color: white;
+        }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.151.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.151.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <input type="file" name="file-in" id="file-input">
+    <script type="module" src="static/index.js"></script>
+    </body>
+</html>
