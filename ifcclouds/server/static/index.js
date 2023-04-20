@@ -163,7 +163,7 @@ fileInput.addEventListener('change', async function(e) {
         console.log('Adding pointcloud to scene');
         scene.add(pointcloud);
         pc = pointcloud;
-        pc.rotation.z += Math.PI;
+        pc.rotation.y += Math.PI;
     };
     const pointcloud = createPointCloud(pointArray);
     console.log('Adding pointcloud to scene');
@@ -180,7 +180,7 @@ document.body.appendChild(stats.dom);
 function animate() {
 	requestAnimationFrame( animate );
     if(pc)
-        pc.rotation.z += 0.001;
+        pc.rotation.y += 0.001;
     controls.update();
 	renderer.render( scene, camera );
     stats.update();

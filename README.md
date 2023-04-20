@@ -62,6 +62,7 @@ python3 -m ifcclouds.server.app
 ```
 
 ## To Do
+- [ ] Improve dataset consumption, to distribute well over classes
 - [ ] Add more models
 
 ## Project Organization
