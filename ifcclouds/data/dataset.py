@@ -7,28 +7,13 @@ import torch
 from torch.utils.data import Dataset
 from multiprocessing import Manager
 
+from ifcclouds.utils import read_ply, load_classes_from_json
+
 DATADIR=os.path.join('data', 'processed')
 
 default_classes = [
   "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
 ]
-
-def read_ply(file):
-  with open(file, 'r') as f:
-    lines = f.readlines()
-    # remove header
-    lines = lines[8:]
-    return lines
-
-def load_classes_from_json(json_file_path, verbose=False):
-    if verbose: print('Loading classes from %s' % json_file_path)
-    try:
-        with open(json_file_path) as json_file:
-            return json.load(json_file)
-    except Exception as e:
-        if verbose: print(e)
-        print('Error loading classes from %s, return default' % json_file_path)
-        return default_classes
 
 class IfcCloudDs(Dataset):
   def __init__(self, partition='train', num_points=4096):
@@ -46,6 +31,8 @@ class IfcCloudDs(Dataset):
     self.num_points = num_points
     self.partition = partition
     self.classes = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'classes.json'))
+    if self.classes is None:
+      self.classes = default_classes
     self.num_classes = len(self.classes)
 
   def __getitem__(self, item):

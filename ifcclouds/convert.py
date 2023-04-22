@@ -9,10 +9,8 @@ import ifcopenshell
 import ifcopenshell.geom
 from tqdm import tqdm
 
-default_classes = [
-    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
-]
-
+from ifcclouds.utils import load_classes_from_json
+from ifcclouds.data.dataset import default_classes
 
 argparser = argparse.ArgumentParser(description='Converts a file from ifc format to ply')
 argparser.add_argument('input', help='Input file')
@@ -22,16 +20,6 @@ argparser.add_argument('-c', '--classes', help='Classes to extract', default=os.
 argparser.add_argument('-f', '--format', help='Output format', default='ply')
 argparser.add_argument('-v', '--verbose', help='Verbose output', action='store_true')
 argparser.add_argument('-d', '--debug', help='Debug output', action='store_true')
-
-def load_classes_from_json(json_file_path, verbose=False):
-    if verbose: print('Loading classes from %s' % json_file_path)
-    try:
-        with open(json_file_path) as json_file:
-            return json.load(json_file)
-    except Exception as e:
-        if verbose: print(e)
-        print('Error loading classes from %s, return default' % json_file_path)
-        return default_classes
 
 def local_to_world(origin, transform, verts):
     return origin + np.matmul(transform.T, verts.T).T
@@ -107,6 +95,8 @@ def process_ifc_file(args):
     ifc_file = ifcopenshell.open(ifc_file_path)
     settings = ifcopenshell.geom.settings()
     class_names = load_classes_from_json(class_path, verbose)
+    if class_names is None:
+        class_names = default_classes
     classes = {ifc_class: None for ifc_class in class_names}
     for ifc_class in tqdm(class_names):
         if verbose: print('Processing %s' % ifc_class)
@@ -161,6 +151,8 @@ def process_ifc(ifc_file_path, out_path, num_points=4096):
     ifc_file = ifcopenshell.open(ifc_file_path)
     settings = ifcopenshell.geom.settings()
     class_names = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'data', 'classes.json'))
+    if class_names is None:
+        class_names = default_classes
     classes = {ifc_class: None for ifc_class in class_names}
     for ifc_class in class_names:
         try:
