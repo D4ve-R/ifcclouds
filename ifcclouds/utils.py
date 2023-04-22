@@ -1,11 +1,10 @@
 import json
+from plyfile import PlyData
+  
 
 def read_ply(file):
-  with open(file, 'r') as f:
-    lines = f.readlines()
-    # remove header
-    lines = lines[8:]
-    return lines
+   plydata = PlyData.read(file)
+   return plydata['vertex'].data
   
 
 def load_classes_from_json(json_file_path, verbose=False):

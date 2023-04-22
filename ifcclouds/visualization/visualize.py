@@ -39,3 +39,13 @@ def viz_dataset(num_samples=-1, partition='train', num_points=4096):
     sample_count += 1
     if num_samples > 0 and sample_count >= num_samples:
       break
+
+def plot_class_occurences(class_attr):
+  """ Plots the occurences of each class in the dataset """
+  classes = [IfcCloudDs.default_classes[i] for i in np.unique(class_attr)]
+  class_occurance = np.bincount(class_attr)
+  class_occurance = class_occurance[class_occurance != 0]
+  plt.bar(classes, class_occurance)
+  plt.xlabel('Class')
+  plt.ylabel('Occurences')
+  plt.show()

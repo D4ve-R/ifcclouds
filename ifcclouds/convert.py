@@ -10,7 +10,7 @@ import ifcopenshell.geom
 from tqdm import tqdm
 
 from ifcclouds.utils import load_classes_from_json
-from ifcclouds.data.dataset import default_classes
+from ifcclouds.data.dataset import IfcCloudDs
 
 argparser = argparse.ArgumentParser(description='Converts a file from ifc format to ply')
 argparser.add_argument('input', help='Input file')
@@ -23,6 +23,7 @@ argparser.add_argument('-d', '--debug', help='Debug output', action='store_true'
 
 def local_to_world(origin, transform, verts):
     return origin + np.matmul(transform.T, verts.T).T
+   
 
 def array_to_ply(data: ndArray):
     """Convert a numpy array to PLY format.
@@ -96,7 +97,7 @@ def process_ifc_file(args):
     settings = ifcopenshell.geom.settings()
     class_names = load_classes_from_json(class_path, verbose)
     if class_names is None:
-        class_names = default_classes
+        class_names = IfcCloudDs.default_classes
     classes = {ifc_class: None for ifc_class in class_names}
     for ifc_class in tqdm(class_names):
         if verbose: print('Processing %s' % ifc_class)
@@ -152,7 +153,7 @@ def process_ifc(ifc_file_path, out_path, num_points=4096):
     settings = ifcopenshell.geom.settings()
     class_names = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'data', 'classes.json'))
     if class_names is None:
-        class_names = default_classes
+        class_names = IfcCloudDs.default_classes
     classes = {ifc_class: None for ifc_class in class_names}
     for ifc_class in class_names:
         try:
