@@ -14,7 +14,10 @@ NUM_CLASSES = len(default_classes)
 app = Flask(__name__)
 model = DGCNN_semseg(NUM_CLASSES)
 model = nn.DataParallel(model)
-model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__), 'model.pt'), map_location=torch.device('cpu')))
+try:
+    model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__), 'model.pt'), map_location=torch.device('cpu')))
+except:
+    print('No model found')
 
 def predict(input):
     model.eval()
@@ -69,4 +72,5 @@ if __name__ == "__main__":
     load_dotenv(find_dotenv('.flaskenv'))
     host = os.getenv('HOST')
     port = os.getenv('PORT')
+    os.system('open http://{}:{}'.format(host, port))
     app.run(host, port)

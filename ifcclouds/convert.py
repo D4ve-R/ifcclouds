@@ -111,32 +111,37 @@ def process_ifc_file(args):
     for ifc_class in tqdm(class_names):
         if verbose: print('Processing %s' % ifc_class)
         entities = 0
-        for ifc_entity in ifc_file.by_type(ifc_class):
-            entities += 1
-            if verbose: print('Processing %s Entity No. %d' % (ifc_class, entities))
-            shape = None
-            try:
-                shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+        try:
+            for ifc_entity in ifc_file.by_type(ifc_class):
+                entities += 1
+                if verbose: print('Processing %s Entity No. %d' % (ifc_class, entities))
+                shape = None
+                try:
+                    shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
 
-                matrix = shape.transformation.matrix.data
-                matrix = np.array(matrix).reshape(4, 3)
-                origin = matrix[-1]
-                transform = matrix[:-1]
-                verts = shape.geometry.verts
-                faces = shape.geometry.faces
+                    matrix = shape.transformation.matrix.data
+                    matrix = np.array(matrix).reshape(4, 3)
+                    origin = matrix[-1]
+                    transform = matrix[:-1]
+                    verts = shape.geometry.verts
+                    faces = shape.geometry.faces
 
-                verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
-                faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
-                verts = local_to_world(origin, transform, verts)
+                    verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+                    faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+                    verts = local_to_world(origin, transform, verts)
 
-                points = gen_pointcloud(verts, faces, num_points)
-                if classes[ifc_class] is None: classes[ifc_class] = []
-                classes[ifc_class].append(points)
+                    points = gen_pointcloud(verts, faces, num_points)
+                    if classes[ifc_class] is None: classes[ifc_class] = []
+                    classes[ifc_class].append(points)
 
-            except Exception as e:
-                if debug: print(e)
-                print('Error creating shape for %s Entity No. %d' % (ifc_class, entities))
-                continue
+                except Exception as e:
+                    if debug: print(e)
+                    print('Error creating shape for %s Entity No. %d' % (ifc_class, entities))
+                    continue
+        except Exception as e:
+            if debug: print(e)
+            print('Error processing %s' % ifc_class)
+            continue
           
         if verbose: print('Processed %d entities of type %s' % (entities, ifc_class))
 
@@ -158,9 +163,9 @@ def process_ifc(ifc_file_path, out_path, num_points=4096):
     class_names = load_classes_from_json(os.path.join(os.path.dirname(__file__), 'data', 'classes.json'))
     classes = {ifc_class: None for ifc_class in class_names}
     for ifc_class in class_names:
-        for ifc_entity in ifc_file.by_type(ifc_class):
-            shape = None
-            try:
+        try:
+            for ifc_entity in ifc_file.by_type(ifc_class):
+                shape = None
                 shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
 
                 matrix = shape.transformation.matrix.data
@@ -177,9 +182,8 @@ def process_ifc(ifc_file_path, out_path, num_points=4096):
                 points = gen_pointcloud(verts, faces, num_points)
                 if classes[ifc_class] is None: classes[ifc_class] = []
                 classes[ifc_class].append(points)
-
-            except Exception as e:
-                continue
+        except Exception as e:
+            continue
 
     all_points = []
     for ifc_class in class_names:
