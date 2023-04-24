@@ -1,6 +1,5 @@
 import os
 import glob
-import json
 import numpy as np
 import random
 import torch
@@ -13,7 +12,7 @@ DATADIR=os.path.join('data', 'processed')
 
 class IfcCloudDs(Dataset):
   default_classes = [
-    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
+    "IfcBeam", "IfcColumn", "IfcCovering", "IfcDoor", "IfcFurniture", "IfcPlate", "IfcRailing", "IfcRamp", "IfcRoof", "IfcStair", "IfcSlab", "IfcWall", "IfcWindow"
   ]
 
   def __init__(self, partition='train', num_points=4096):

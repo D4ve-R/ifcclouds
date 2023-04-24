@@ -46,6 +46,6 @@ def plot_class_occurences(class_attr):
   class_occurance = np.bincount(class_attr)
   class_occurance = class_occurance[class_occurance != 0]
   plt.bar(classes, class_occurance)
-  plt.xlabel('Class')
+  plt.xlabel('Classes')
   plt.ylabel('Occurences')
   plt.show()
