@@ -16,7 +16,7 @@ def load_classes_from_json(json_file_path, verbose=False):
         print('Error loading classes from %s, return default' % json_file_path)
         return None
 
-def array_to_ply(data: np.ndArray):
+def array_to_ply(data):
     """Convert a numpy array to PLY format.
     data is a numpy array of shape (n, 4) where n is the number of vertices.
     where the fourth column is the class.
@@ -28,13 +28,19 @@ def array_to_ply(data: np.ndArray):
     ply += 'property float x\n'
     ply += 'property float y\n'
     ply += 'property float z\n'
+    ply += 'property uchar red\n'
+    ply += 'property uchar green\n'
+    ply += 'property uchar blue\n'
     ply += 'property int class\n'
     ply += 'end_header\n'
     for vertex in data:
-        ply += '%f %f %f %d\n' % (vertex[0], vertex[1], vertex[2], vertex[3])
+        line = '%f %f %f' % (vertex[0], vertex[1], vertex[2])
+        line += ' %d %d %d' % (vertex[3], vertex[4], vertex[5])
+        line += ' %d\n' % vertex[6]
+        ply += line
     return ply
 
-def array_to_xyzrbg(data: np.ndArray):
+def array_to_xyzrbg(data):
     """Convert a numpy array to XYZRGB format.
     data is a numpy array of shape (n, 7) where n is the number of vertices.
     where the fourth column is the class.
@@ -45,7 +51,7 @@ def array_to_xyzrbg(data: np.ndArray):
         xyzrgb += '%f %f %f %d %d %d\n' % (vertex[0], vertex[1], vertex[2], vertex[3], vertex[4], vertex[5])
     return xyzrgb
 
-def array_to_pcd(data: np.ndArray):
+def array_to_pcd(data):
     """Convert a numpy array to PCD format.
     data is a numpy array of shape (n, 7) where n is the number of vertices.
     where the fourth column is the class.

@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike as ndArray
 import ifcopenshell
 import ifcopenshell.geom
 from tqdm import tqdm
-import multiprocessing
+from dotenv import find_dotenv, load_dotenv
 
 from ifcclouds.utils import load_classes_from_json, array_to_ply
 from ifcclouds.data.dataset import IfcCloudDs
@@ -69,54 +69,28 @@ def process_ifc(ifc_file_path, out_path, num_points=1000, class_path=None, verbo
     if class_names is None:
         class_names = IfcCloudDs.default_classes
     classes = {ifc_class: None for ifc_class in class_names}
+    colors = {ifc_class: None for ifc_class in class_names}
     for ifc_class in (tqdm(class_names) if verbose else class_names):
         if verbose: print('Processing %s' % ifc_class)
         try:
-            if os.getenv('MAGIC'):
-                iterator = ifcopenshell.geom.iterator(settings, ifc_file, multiprocessing.cpu_count())
-                if iterator.initialize():
-                    while True:
-                        shape = iterator.get()
-                        if shape.type not in class_names:
-                            pass
-                            
-                        matrix = shape.transformation.matrix.data
-                        matrix = np.array(matrix).reshape(4, 3)
-                        origin = matrix[-1]
-                        transform = matrix[:-1]
-                        faces = shape.geometry.faces
-                        verts = shape.geometry.verts
-                        materials = shape.geometry.materials
-                        material_ids = shape.geometry.material_ids
-                        verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
-                        faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
-                        verts = local_to_world(origin, transform, verts)
-                        points = gen_pointcloud(verts, faces, num_points)
-                        if classes[shape.type] is None: classes[shape.type] = []
-                        classes[shape.type].append(points)
-                        if not iterator.next():
-                            break
-            else:
+            for ifc_entity in ifc_file.by_type(ifc_class):
+                shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
+                matrix = shape.transformation.matrix.data
+                matrix = np.array(matrix).reshape(4, 3)
+                origin = matrix[-1]
+                transform = matrix[:-1]
+                verts = shape.geometry.verts
+                faces = shape.geometry.faces
+                materials = shape.geometry.materials
+                rgb = [int(255 * x) for x in materials[0].diffuse]
+                colors[ifc_class] = rgb
 
-                for ifc_entity in ifc_file.by_type(ifc_class):
-                    shape = ifcopenshell.geom.create_shape(settings, ifc_entity)
-                    matrix = shape.transformation.matrix.data
-                    matrix = np.array(matrix).reshape(4, 3)
-                    origin = matrix[-1]
-                    transform = matrix[:-1]
-                    verts = shape.geometry.verts
-                    faces = shape.geometry.faces
-                    materials = shape.geometry.materials
-                    rgb = [int(255 * x) for x in materials[0].diffuse]
-                    print(rgb)
-
-                    verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
-                    faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
-                    verts = local_to_world(origin, transform, verts)
-
-                    points = gen_pointcloud(verts, faces, num_points)
-                    if classes[ifc_class] is None: classes[ifc_class] = []
-                    classes[ifc_class].append(points)
+                verts = np.array([[verts[i], verts[i + 1], verts[i + 2]] for i in range(0, len(verts), 3)])
+                faces = np.array([[faces[i], faces[i + 1], faces[i + 2]] for i in range(0, len(faces), 3)])
+                verts = local_to_world(origin, transform, verts)
+                points = gen_pointcloud(verts, faces, num_points)
+                if classes[ifc_class] is None: classes[ifc_class] = []
+                classes[ifc_class].append(points)
         except Exception as e:
             if debug: print(e)
             if verbose: print('Error creating shape for %s' % ifc_class)
@@ -124,11 +98,15 @@ def process_ifc(ifc_file_path, out_path, num_points=1000, class_path=None, verbo
 
     all_points = []
     for ifc_class in class_names:
-        if classes[ifc_class] is not None:
-            points = np.concatenate(classes[ifc_class])
-            labels = np.full((points.shape[0], 1), class_names.index(ifc_class))
-            labeled_points = np.concatenate((points, labels), axis=1)
-            all_points.append(labeled_points)
+        if classes[ifc_class] is None:
+            continue
+
+        points = np.concatenate(classes[ifc_class])
+        labels = np.full((points.shape[0], 1), class_names.index(ifc_class))
+        pt_colors = np.full((points.shape[0], 3), colors[ifc_class])
+        labeled_points = np.concatenate((points, pt_colors), axis=1)
+        labeled_points = np.concatenate((labeled_points, labels), axis=1)
+        all_points.append(labeled_points)
 
     with open(os.path.join(out_path, ifc_file_name+'.ply'), 'w') as out_file:
         out_file.write(array_to_ply(np.concatenate(all_points)))
@@ -148,4 +126,5 @@ def main(argv = sys.argv[1:]):
     process_ifc(args.input, args.output, num_points=args.num_points, class_path=args.classes, verbose=args.verbose, debug=args.debug)
 
 if __name__ == '__main__':
+    load_dotenv(find_dotenv())
     main()

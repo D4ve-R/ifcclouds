@@ -65,18 +65,22 @@ function readPlyFile(file, pointArray) {
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 const values = line.split(' ');
-                if (values.length === 4) {
-                    const x = parseFloat(values[0]);
-                    const y = parseFloat(values[1]);
-                    const z = parseFloat(values[2]);
-                    const class_idx = parseInt(values[3]);
-                    pointArray.push({
-                        x: x,
-                        y: z,   // in threejs y is up
-                        z: y,
-                        ...colors[class_idx],
-                    });
-                }
+                const x = parseFloat(values[0]);
+                const y = parseFloat(values[1]);
+                const z = parseFloat(values[2]);
+                const r = parseInt(values[3]) / 255.0;
+                const g = parseInt(values[4]) / 255.0;
+                const b = parseInt(values[5]) / 255.0;
+                const class_idx = parseInt(values[6]);
+                pointArray.push({
+                    x: x,
+                    y: z,   // in threejs y is up
+                    z: y,
+                    r: r,
+                    g: g,
+                    b: b,
+                    class_idx: class_idx,
+                });
             }
             resolve(pointArray);
         };
